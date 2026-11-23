@@ -112,6 +112,101 @@ if test "$setup" = "false"
     echo "Please run the script with --setup to configure your config.json file."
     exit
 end
+
+function restore
+    set backups99 (ls -1t "$desti"/*.tar.gz 2>/dev/null)
+    if test (count $backups99) -eq 0
+        echo "No backups found in $desti"
+        exit
+    end
+    echo "Available backups:"
+    for backup99 in $backups99
+        echo "    $backup99"
+    end
+    read -P "Enter the backup file you want to restore (e.g. 2026-01-01_01-00-00.tar.gz): " restorefile
+    set restore "$desti/$restorefile"
+    if test -f "$restore"
+        read -P "Are you sure you want to restore this backup? This will overwrite exsisting files. (A backup will be created before restoring) [y/n]: " confirm
+        if test "$confirm" != "y"
+        echo "Cancelled."
+        exit
+        end
+        echo "Creating a backup before restoring..."
+        set timename (date "+%Y-%m-%d_%H-%M-%S")
+        echo "Backing up to $desti/$timename"
+        if tar -cf "$desti/$timename.tar.gz" --use-compress-program="gzip -$compl" -- $sources
+        echo "Backup completed successfully."
+        else
+        echo "Backup failed!!!!!!!!!!!!!!!!!!!!!"
+        echo " try running the script with --setup to reconfigure your config.json file."
+        exit
+        end
+        read -P "Press enter to continue"
+        echo "Restoring backup $restore..."
+        if tar -xf "$restore" -C /
+        echo "Restore completed successfully."
+        else
+        echo "Restore failed!"
+        exit
+        end
+        echo "Removing old backups..."
+        set backups (ls -1t "$desti"/*.tar.gz 2>/dev/null)
+        if test (count $backups) -gt $keep
+            set old $backups[(math "$keep+1")..-1]
+            if contains -- "$restore" $old
+                echo "The backup you are restored is also the oldest backup. It will be removed. Do you want to save it somewhere else, before removing it from there? [y/n]"
+                read -P "Save backup? " save
+                if test "$save" = "y"
+                    set savepath "$HOME"
+                    if cp -- "$restore" "$savepath"
+                    echo "Backup saved to $savepath"
+                    else
+                        echo "Failed to save backup to $savepath"
+                        echo "Save it manually."
+                        exit
+                    end
+                end
+            end
+            rm -- $old
+        echo "Removed old backup: $old"
+            printf '    %s\n' $old
+        end
+    else
+        echo "Backup file $restore does not exist."
+        exit
+    end
+end
+if test "$argv[1]" = "--restore"
+    restore
+    exit
+end
+
+function croninstall
+    set minutes (math "$interval * 60")
+if test "$minutes" -lt 60
+    set cront "*/$minutes * * * *"
+else if test (math "$minutes % 60") -eq 0
+    set hours (math "$minutes / 60")
+    set cront "0 */$hours * * *"
+else
+    echo "This interval cannot be represented by a simple cron schedule. Please set the interval to a whole number of hours with --setup."
+    exit
+end
+    set cronjob "$cront $dir/SBM.fish --backup"
+        if begin
+        crontab -l 2>/dev/null
+        echo "$cronjob"
+        end | crontab -
+        echo "Cron job installed: $cronjob"
+        else
+        echo "Failed to install cron job."
+        exit
+        end
+end
+if test "$argv[1]" = "--croninstall"
+    croninstall
+    exit
+end
 function backup
     set timename (date "+%Y-%m-%d_%H-%M-%S")
     echo "Backing up to $desti/$timename"
@@ -130,6 +225,10 @@ function backup
         echo " try running the script with --setup to reconfigure your config.json file."
         return 1
     end
+end
+if test "$argv[1]" = "--backup"
+    backup
+    exit
 end
 while true
 backup
