@@ -34,6 +34,22 @@ Arch Linux:
 sudo pacman -S jq
 ```
 
+## Installing cron
+Debian:
+```bash
+sudo apt install cron
+```
+
+Fedora:
+```bash
+sudo dnf install cronie
+```
+
+Arch Linux:
+```bash
+sudo pacman -S cronie
+```
+
 ## First use:
 
 ```bash
@@ -59,9 +75,42 @@ Then it asks how many backup files you want to keep. For example, if you enter 5
 
 Then it asks how often you want to create backups. You need to specify this in hours. For example, entering 1 means 1 hour, 1.5 means an hour and a half, and you can even enter 0.5. Anything greater than 0 is fine.
 
-## Usage
+# Usage
+
+## Builtin mode:
 
 Just run the script, and it will automatically create the backups.
 ```bash
 ./sbm.fish
 ```
+
+## Cron (Recommended):
+
+Better timed execution.
+
+Ensure that cron is installed on the device. If it is not, the script will notify you. 
+
+Run this command first:
+```bash
+./sbm.fish --croninstall
+```
+
+This will install the cron configuration, and start and enable the cron service.
+
+To stop the automation, run this:
+```bash
+./sbm.fish --cronremove
+```
+
+## Restore:
+
+```bash
+./sbm.fish --restore
+```
+This lists the available backups, and you must enter the filename of the backup you wish to restore. Before performing the restore, it creates a new backup of the current state. After the restore is complete, it deletes the oldest backup; however, if the backup being restored happens to be the oldest one, it creates a copy of it before deletion.
+
+## Just backup:
+```bash
+./sbm.fish --backup
+```
+This creates a backup, without a schedule.

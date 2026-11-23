@@ -40,6 +40,7 @@ if test "$dircyn" = "y"
 mkdir -p "$des"
 else
 echo "Please enter a valid destination directory."
+exit
 end
 end
 echo "What compression level do you want to use? (1-9, 1=fastest, 9=best)"
@@ -182,6 +183,22 @@ if test "$argv[1]" = "--restore"
 end
 
 function croninstall
+if not type -q crontab
+    echo "crontab is not installed. Do you want to install it now? (Only on Debian-based systems) [y/n]"
+    read -P "Install crontab? " crony
+    if test "$crony" = "y"
+        if sudo apt update && sudo apt install cron && sudo systemctl enable --now cron
+            echo "crontab installed successfully."
+        else
+            echo "Failed to install crontab."
+            echo "crontab is required. Please install it manually. Exiting."
+            exit
+        end
+    else
+        echo "crontab is required. Please install it manually. Exiting."
+        exit
+    end
+end
     set minutes (math "$interval * 60")
 if test "$minutes" -lt 60
     set cront "*/$minutes * * * *"
@@ -192,19 +209,50 @@ else
     echo "This interval cannot be represented by a simple cron schedule. Please set the interval to a whole number of hours with --setup."
     exit
 end
-    set cronjob "$cront $dir/SBM.fish --backup"
+    set cronjob "$cront $dir/sbm.fish --backup # sbm"
+        if crontab -l 2>/dev/null | string match -q '*# sbm*'
+        echo "SBM cron job is already installed."
+        exit
+        end
         if begin
         crontab -l 2>/dev/null
         echo "$cronjob"
         end | crontab -
         echo "Cron job installed: $cronjob"
+        read -P "Do you want to start the cron service now? [y/n]: " startcron
+        if test "$startcron" = "y"
+            if sudo systemctl enable --now cron
+                echo "Cron service started."
+            else
+                echo "Failed to start cron service. Please start it manually."
+                exit
+            end
         else
-        echo "Failed to install cron job."
-        exit
+        echo "If cron service not started, start it manually."
         end
+    else
+    echo "Failed to install cron job."
+    return
+    end
 end
 if test "$argv[1]" = "--croninstall"
     croninstall
+    exit
+end
+function cronremove
+    if crontab -l 2>/dev/null | string match -q '*# sbm*'
+        if crontab -l 2>/dev/null | string match -v '*# sbm*' | crontab -
+        echo "SBM cron job removed."
+        else
+        echo "Failed to remove SBM cron job."
+        exit
+        end
+    else
+        echo "SBM cron job is not installed."
+    end
+end
+if test "$argv[1]" = "--cronremove"
+    cronremove
     exit
 end
 function backup
