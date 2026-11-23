@@ -114,3 +114,7 @@ This lists the available backups, and you must enter the filename of the backup 
 ./sbm.fish --backup
 ```
 This creates a backup, without a schedule.
+
+## About:
+This code was written by Zoárd Gódor
+LICENSE: MIT
